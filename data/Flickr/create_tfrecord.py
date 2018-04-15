@@ -22,6 +22,9 @@ flags.DEFINE_string('label_map_path', '/home/hillyess/ai/project-image-caption/F
                     'Path to label map')
 FLAGS = flags.FLAGS
 
+Label_index = 0
+
+
 def openAnnotation(path):
     f = open(path, mode='r', encoding="utf-8")
     a = f.readlines()
@@ -38,7 +41,6 @@ def openAnnotation(path):
             label = []
         label.append(s[0])
     return path_label_dict
-
 
 
 def dict_to_tf_example(label_map_dict):
@@ -87,10 +89,15 @@ def dict_to_tf_example(label_map_dict):
           except KeyError:
             sentence.append(dictionary['UNK'])
       sentences.append(sentence)
+  global Label_index
+  Label_index = Label_index + 1
+
+
 
   feature_dict = {
       'image/height': dataset_util.int64_feature(height),
       'image/width': dataset_util.int64_feature(witdh),
+      'image/index': dataset_util.int64_feature(Label_index),
       'image/filename': dataset_util.bytes_feature(filename.encode('utf8')),
       'image/score_0': dataset_util.int64_list_feature(sentences[0]),
       'image/score_1': dataset_util.int64_list_feature(sentences[1]),

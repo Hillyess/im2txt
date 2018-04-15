@@ -1,0 +1,8 @@
+*.jpg
+*.tfrecord
+*.xml
+models/*.npy
+__pycache__/
+summary/*
+*.csv
+*.json

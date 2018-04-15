@@ -3,7 +3,9 @@ import tensorflow as tf
 
 from config import Config
 from model import CaptionGenerator
+#from utils.Flickr.Flickr_dataset import prepare_train_data, prepare_eval_data, prepare_test_data
 from dataset import prepare_train_data, prepare_eval_data, prepare_test_data
+from utils.Flickr import configuration
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -16,6 +18,9 @@ tf.flags.DEFINE_boolean('load', False,
 
 tf.flags.DEFINE_string('model_file', None,
                        'If sepcified, load a pretrained model from this file')
+
+tf.flags.DEFINE_string('data_set', 'coco',
+                       'Choose a　dataset')
 
 tf.flags.DEFINE_boolean('load_cnn', False,
                         'Turn on to load a pretrained CNN model')
@@ -35,35 +40,71 @@ def main(argv):
     config.phase = FLAGS.phase
     config.train_cnn = FLAGS.train_cnn
     config.beam_size = FLAGS.beam_size
-
     with tf.Session() as sess:
-        if FLAGS.phase == 'train':
-            # training phase
-            data = prepare_train_data(config)
-            model = CaptionGenerator(config)
-            sess.run(tf.global_variables_initializer())
-            if FLAGS.load:
+        if FLAGS.data_set == 'coco':
+            if FLAGS.phase == 'train':
+                # training phase
+                data = prepare_train_data(config)
+                model = CaptionGenerator(config)
+                sess.run(tf.global_variables_initializer())
+                if FLAGS.load:
+                    model.load(sess, FLAGS.model_file)
+                if FLAGS.load_cnn:
+                    model.load_cnn(sess, FLAGS.cnn_model_file)
+                tf.get_default_graph().finalize()
+                model.train(sess, data)
+
+            elif FLAGS.phase == 'eval':
+                # evaluation phase
+                coco, data, vocabulary = prepare_eval_data(config)
+                model = CaptionGenerator(config)
                 model.load(sess, FLAGS.model_file)
-            if FLAGS.load_cnn:
-                model.load_cnn(sess, FLAGS.cnn_model_file)
-            tf.get_default_graph().finalize()
-            model.train(sess, data)
+                tf.get_default_graph().finalize()
+                model.eval(sess, coco, data, vocabulary)
 
-        elif FLAGS.phase == 'eval':
-            # evaluation phase
-            coco, data, vocabulary = prepare_eval_data(config)
-            model = CaptionGenerator(config)
-            model.load(sess, FLAGS.model_file)
-            tf.get_default_graph().finalize()
-            model.eval(sess, coco, data, vocabulary)
+            else:
+                # testing phase
+                data, vocabulary = prepare_test_data(config)
+                model = CaptionGenerator(config)
+                model.load(sess, FLAGS.model_file)
+                tf.get_default_graph().finalize()
+                model.test(sess, data, vocabulary)
+        elif FLAGS.data_set == 'Flickr':
+            model_config = configuration.ModelConfig()
+            model_config.input_file_pattern = FLAGS.input_file_pattern
+            model_config.inception_checkpoint_file = FLAGS.inception_checkpoint_file
+            training_config = configuration.TrainingConfig()
 
-        else:
-            # testing phase
-            data, vocabulary = prepare_test_data(config)
-            model = CaptionGenerator(config)
-            model.load(sess, FLAGS.model_file)
-            tf.get_default_graph().finalize()
-            model.test(sess, data, vocabulary)
+
+
+            if FLAGS.phase == 'train':
+                # training phase
+                data = prepare_train_data(config)
+                model = CaptionGenerator(config)
+                sess.run(tf.global_variables_initializer())
+                if FLAGS.load:
+                    model.load(sess, FLAGS.model_file)
+                if FLAGS.load_cnn:
+                    model.load_cnn(sess, FLAGS.cnn_model_file)
+                tf.get_default_graph().finalize()
+                model.train(sess, data)
+
+            elif FLAGS.phase == 'eval':
+                # evaluation phase
+                coco, data, vocabulary = prepare_eval_data(config)
+                model = CaptionGenerator(config)
+                model.load(sess, FLAGS.model_file)
+                tf.get_default_graph().finalize()
+                model.eval(sess, coco, data, vocabulary)
+
+            else:
+                # testing phase
+                data, vocabulary = prepare_test_data(config)
+                model = CaptionGenerator(config)
+                model.load(sess, FLAGS.model_file)
+                tf.get_default_graph().finalize()
+                model.test(sess, data, vocabulary)
+
 
 if __name__ == '__main__':
     tf.app.run()

@@ -1,3 +1,4 @@
+import sys
 import os
 import numpy as np
 import pandas as pd
@@ -7,6 +8,7 @@ import pickle as pickle
 import copy
 import json
 from tqdm import tqdm
+
 
 from utils.nn import NN
 from utils.coco.coco import COCO
@@ -19,20 +21,22 @@ class BaseModel(object):
         self.is_train = True if config.phase == 'train' else False
         self.train_cnn = self.is_train and config.train_cnn
         self.image_loader = ImageLoader('./utils/ilsvrc_2012_mean.npy')
+        #self.tfreccord_reader
         self.image_shape = [224, 224, 3]
         self.nn = NN(config)
         self.global_step = tf.Variable(0,
-                                       name = 'global_step',
-                                       trainable = False)
+                                       name='global_step',
+                                       trainable=False)
         self.build()
 
     def build(self):
         raise NotImplementedError()
 
-    def train(self, sess, train_data):
+    def train(self, sess, train_data, file_tfRecord)-> 'tfrecord stores encoded image content':
         """ Train the model using the COCO train2014 data. """
         print("Training the model...")
         config = self.config
+
 
         if not os.path.exists(config.summary_dir):
             os.mkdir(config.summary_dir)
@@ -44,6 +48,7 @@ class BaseModel(object):
                 batch = train_data.next_batch()
                 image_files, sentences, masks = batch
                 images = self.image_loader.load_images(image_files)
+                features = self.read_tfRecord(file_tfRecord)
                 feed_dict = {self.images: images,
                              self.sentences: sentences,
                              self.masks: masks}
@@ -282,3 +287,20 @@ class BaseModel(object):
                     except ValueError:
                         pass
         print("%d tensors loaded." %count)
+
+    def read_tfRecord(self, file_tfRecord):
+        queue = tf.train.string_input_producer([file_tfRecord])
+        reader = tf.TFRecordReader()
+        _, serialized_example = reader.read(queue)
+        features = tf.parse_single_example(
+            serialized_example,
+            features = {
+            'image/height': tf.FixedLenFeature([], tf.string),
+            'image/width': tf.FixedLenFeature([], tf.int64),
+            'image/index': tf.FixedLenFeature([], tf.int64),
+            'image/filename': tf.FixedLenFeature([], tf.int64),
+            'image/encoded': tf.FixedLenFeature([], tf.int64),
+            'image/score_4': tf.FixedLenFeature([], tf.int64)
+            }
+        )
+        return features

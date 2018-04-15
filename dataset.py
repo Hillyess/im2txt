@@ -70,6 +70,7 @@ class DataSet(object):
         """ Determine whether there is a full batch left. """
         return self.current_idx + self.batch_size <= self.count
 
+
 def prepare_train_data(config):
     """ Prepare the data for training the model. """
     coco = COCO(config.train_caption_file)
@@ -126,7 +127,7 @@ def prepare_train_data(config):
         word_idxs = data['word_idxs']
         masks = data['masks']
     print("Captions processed.")
-    print("Number of captions = %d" %(len(captions)))
+    print("Number of captions = %d" % (len(captions)))
 
     print("Building the dataset...")
     dataset = DataSet(image_ids,
@@ -138,6 +139,7 @@ def prepare_train_data(config):
                       True)
     print("Dataset built.")
     return dataset
+
 
 def prepare_eval_data(config):
     """ Prepare the data for evaluating the model. """
@@ -161,6 +163,7 @@ def prepare_eval_data(config):
     print("Dataset built.")
     return coco, dataset, vocabulary
 
+
 def prepare_test_data(config):
     """ Prepare the data for testing the model. """
     files = os.listdir(config.test_image_dir)
@@ -181,6 +184,7 @@ def prepare_test_data(config):
     dataset = DataSet(image_ids, image_files, config.batch_size)
     print("Dataset built.")
     return dataset, vocabulary
+
 
 def build_vocabulary(config):
     """ Build the vocabulary from the training data and save it to a file. """
